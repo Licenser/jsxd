@@ -6,6 +6,7 @@
 
 -export([new/0,
          get/2,
+         get/3,
          set/3,
          delete/2,
          update/3,
@@ -17,7 +18,7 @@
 
 -type keys()::key()|[key()].
 
--type value()::binary()|number()|object()|jsxarray()|null.
+-type value()::binary()|number()|object()|jsxarray()|null|true|false.
 
 -type object()::[{key(), value()}].
 
@@ -29,7 +30,17 @@ new() ->
     [].
 
 
--spec get(Key::keys(), Obj::object()|jsxarray()) -> value().
+-spec get(Key::keys(), Default::value(), Obj::object()|jsxarray()) -> value().
+
+get(Key, Default, Obj) ->
+    case get(Key, Obj) of
+        {ok, Val} ->
+            Val;
+        _ ->
+            Default
+    end.
+
+-spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()}.
 
 get(Key, Obj) when is_list(Obj),
                    (is_integer(Key) orelse
@@ -76,8 +87,6 @@ get([Key | Keys], Obj) when is_list(Obj),
 
 set(Key, Val, Obj) when not is_list(Key) ->
     set([Key], Val, Obj);
-
-
 
 set([Pos], Val, [H | _T] = Arr) when is_integer(Pos),
                                      (is_number(H) orelse
@@ -229,7 +238,10 @@ get_arr_test() ->
     ?assertEqual({ok, 60},
                  jsxd:get([1,5], Arr)),
     ?assertEqual(not_found,
-                 jsxd:get([2,5], Arr)).
+                 jsxd:get([2,5], Arr)),
+    ?assertEqual(42,
+                 jsxd:get([2,5], 42, Arr)).
+
 
 get_obj_test() ->
     SubArr = [10,20,30,40,50,60],
@@ -241,6 +253,8 @@ get_obj_test() ->
                  jsxd:get(<<"float">>, Obj)),
     ?assertEqual(not_found,
                  jsxd:get(1, Obj)),
+    ?assertEqual(42,
+                 jsxd:get(1, 42, Obj)),
     ?assertEqual({ok, 20},
                  jsxd:get([<<"b">>, 1], Obj)),
     ?assertEqual({ok, 11},

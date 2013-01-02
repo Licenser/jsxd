@@ -27,7 +27,7 @@ Keys is the abstraction over the Path in the nested structure that jsxd uses to 
 get/2
 ------------
 
-jsxd exports  get/2 method to read data the parameters passed are a key or list of keys, it either returns `{ok, <value>}` or `not_found`.
+jsxd exports `get/2` method to read data the parameters passed are a key or list of keys, it either returns `{ok, <value>}` or `not_found`.
 
 ```erlang
 Object = [{<<"a">>, 1}, {<<"b">>, [10, 20, 30]}].
@@ -35,6 +35,19 @@ Object = [{<<"a">>, 1}, {<<"b">>, [10, 20, 30]}].
 {ok, 20} = jsxd:get([<<"b">>, 1], Object).
 not_found = jsxd:get([<<"b">>, 1,2], Object).
 ```
+
+get/3
+------------
+
+`get/3` is a get method with a default value, it will never not return `not_found` or a `{ok, _}` tupel but instead always a value, either the found one or the default privded
+
+```erlang
+Object = [{<<"a">>, 1}].
+1 = jsxd:get(<<"a">>, 42, Object).
+42 = jsxd:get([<<"b">>, 1,2], 42, Object).
+```
+
+
 
 set/3
 ------------
