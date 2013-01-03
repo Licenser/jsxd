@@ -12,7 +12,8 @@
          update/3,
          update/4,
          map/2,
-         reduce/3]).
+         reduce/3,
+         thread/2]).
 
 -type key()::binary()|integer().
 
@@ -105,13 +106,7 @@ set([Key], Val, [] = Obj) when is_binary(Key) ->
     lists:keystore(Key, 1, Obj, {Key, Val});
 
 set([Key | [_ | _] = Keys], Value, Obj) ->
-    Obj1 = case jsxd:get([Key], Obj) of
-               not_found ->
-                   jsxd:set(Keys, Value, jsxd:new());
-               {ok, SubObj1} ->
-                   jsxd:set(Keys, Value, SubObj1)
-           end,
-    jsxd:set([Key], Obj1, Obj).
+    jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
 
 delete(Key, Obj) when not is_list(Key)->
     delete([Key], Obj);
@@ -184,6 +179,25 @@ reduce(ReduceFn, Acc0, Obj) ->
                                    {I + 1, ReduceFn(I, Elem, Acc)}
                            end, {0, Acc0}, Obj),
     Res.
+
+thread([], Obj) ->
+    Obj;
+
+thread([{set, K, V}|As], Obj) ->
+    thread(As, jsxd:set(K, V, Obj));
+
+thread([{delete, K}|As], Obj) ->
+    thread(As, jsxd:delete(K, Obj));
+
+thread([{update, K, Fn}|As], Obj) ->
+    thread(As, jsxd:update(K, Fn, Obj));
+
+thread([{update, K, Dflt, Fn}|As], Obj) ->
+    thread(As, jsxd:update(K, Fn, Dflt, Obj));
+
+thread([{map, Fn}|As], Obj) ->
+    thread(As, jsxd:map(Fn, Obj)).
+
 
 %%%===================================================================
 %%% Internal functions
