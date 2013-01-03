@@ -5,6 +5,7 @@
 -endif.
 
 -export([new/0,
+         from_list/1,
          get/2,
          get/3,
          set/3,
@@ -13,6 +14,8 @@
          update/4,
          map/2,
          reduce/3,
+         merge/2,
+         merge/3,
          thread/2]).
 
 -type key()::binary()|integer().
@@ -25,11 +28,23 @@
 
 -type jsxarray()::[value()].
 
+
+from_list([{_,_}|_] = Obj) ->
+    Obj1 = ordsets:from_list(Obj),
+    jsxd:map(fun (_, E) ->
+                     jsxd:from_list(E)
+             end, Obj1);
+
+from_list(Obj) when is_list(Obj) ->
+    lists:map(fun jsxd:from_list/1, Obj);
+
+from_list(Obj) ->
+    Obj.
+
 -spec new() -> jsxarray() | object().
 
 new() ->
     [].
-
 
 -spec get(Key::keys(), Default::value(), Obj::object()|jsxarray()) -> value().
 
@@ -100,10 +115,11 @@ set([Pos], Val, [] = Arr) when is_integer(Pos) ->
     set_arr(Pos, Val, Arr);
 
 set([Key], Val, [{_, _} | _T] = Obj) when is_binary(Key) ->
-    lists:keystore(Key, 1, Obj, {Key, Val});
+    ordsets:add_element({Key, Val},
+                        lists:keydelete(Key, 1, Obj));
 
-set([Key], Val, [] = Obj) when is_binary(Key) ->
-    lists:keystore(Key, 1, Obj, {Key, Val});
+set([Key], Val, []) when is_binary(Key) ->
+    [{Key, Val}];
 
 set([Key | [_ | _] = Keys], Value, Obj) ->
     jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
@@ -116,10 +132,10 @@ delete([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
     lists:keydelete(Key, 1, Obj);
 
 delete([Pos], [H | _T] = Arr) when is_integer(Pos),
-                                     (is_number(H) orelse
-                                      is_binary(H) orelse
-                                      is_list(H) orelse
-                                      is_atom(H))->
+                                   (is_number(H) orelse
+                                    is_binary(H) orelse
+                                    is_list(H) orelse
+                                    is_atom(H))->
     try lists:nthtail(Pos + 1, Arr) of
         T ->
             lists:sublist(Arr, Pos) ++ T
@@ -171,8 +187,8 @@ map(MapFn, Obj) ->
 
 reduce(ReduceFn, Acc0, [{_, _} | _] = Obj) ->
     lists:foldl(fun ({K, V}, Acc) ->
-                                   ReduceFn(K, V, Acc)
-                           end, Acc0, Obj);
+                        ReduceFn(K, V, Acc)
+                end, Acc0, Obj);
 
 reduce(ReduceFn, Acc0, Obj) ->
     {_, Res} = lists:foldl(fun (Elem, {I, Acc}) ->
@@ -180,8 +196,30 @@ reduce(ReduceFn, Acc0, Obj) ->
                            end, {0, Acc0}, Obj),
     Res.
 
-thread([], Obj) ->
-    Obj;
+
+merge(Obj1, Obj2) ->
+    merge(fun(_,V,_) -> V end, Obj1, Obj2).
+
+merge(ConflictFn, Obj1, Obj2) ->
+    acc_merge(ConflictFn, Obj1, Obj2, []).
+
+acc_merge(_ConflictFn, [], [], ObjAcc) ->
+    ordsets:from_list(ObjAcc);
+
+acc_merge(ConflictFn, [{K1, V1}|Obj1], [{K2, _}|_] = Obj2, ObjAcc) when K1 < K2 ->
+    acc_merge(ConflictFn, Obj1, Obj2, [{K1, V1} | ObjAcc]);
+
+acc_merge(ConflictFn, [{K1, V1}|Obj1], [{K1, V2}|Obj2], ObjAcc) ->
+    acc_merge(ConflictFn, Obj1, Obj2, [{K1, ConflictFn(K1, V1, V2)} | ObjAcc]);
+
+acc_merge(ConflictFn, [], Obj2, ObjAcc) ->
+    acc_merge(ConflictFn, [], [], ObjAcc ++ Obj2);
+
+acc_merge(ConflictFn, Obj1, [{K2, V2}|Obj2], ObjAcc) ->
+    acc_merge(ConflictFn, Obj1, Obj2, [{K2, V2} | ObjAcc]);
+
+acc_merge(ConflictFn, Obj1, [], ObjAcc) ->
+    acc_merge(ConflictFn,[], [], ObjAcc ++ Obj1).
 
 thread([{set, K, V}|As], Obj) ->
     thread(As, jsxd:set(K, V, Obj));
@@ -192,8 +230,14 @@ thread([{delete, K}|As], Obj) ->
 thread([{update, K, Fn}|As], Obj) ->
     thread(As, jsxd:update(K, Fn, Obj));
 
-thread([{update, K, Dflt, Fn}|As], Obj) ->
+thread([{update, K, Fn, Dflt}|As], Obj) ->
     thread(As, jsxd:update(K, Fn, Dflt, Obj));
+
+thread([{merge, Obj1}|As], Obj) ->
+    thread(As, jsxd:merge(Obj1, Obj));
+
+thread([{merge,ConflictFn, Obj1}|As], Obj) ->
+    thread(As, jsxd:merge(ConflictFn, Obj1, Obj));
 
 thread([{map, Fn}|As], Obj) ->
     thread(As, jsxd:map(Fn, Obj)).
@@ -234,11 +278,17 @@ set_arr(Pos, Val, Arr) ->
 -ifdef(TEST).
 
 new_test() ->
-    ?assertEqual(jsxd:new(), []).
+    ?assertEqual([], jsxd:new()).
+
+
+from_list_test() ->
+    ?assertEqual([2,1], jsxd:from_list([2,1])),
+    ?assertEqual([{<<"a">>, 2}, {<<"b">>, 1}], jsxd:from_list([{<<"b">>, 1}, {<<"a">>, 2}])),
+    ?assertEqual([[{<<"a">>, 2}, {<<"b">>, 1}], 2], jsxd:from_list([[{<<"b">>, 1}, {<<"a">>, 2}], 2])).
 
 get_arr_test() ->
     SubArr = [10,20,30,40,50,60],
-    Arr = [1,SubArr,3,4,5,6],
+    Arr = from_list([1,SubArr,3,4,5,6]),
     ?assertEqual({ok, 1},
                  jsxd:get(0, Arr)),
     ?assertEqual({ok, SubArr},
@@ -260,7 +310,7 @@ get_arr_test() ->
 get_obj_test() ->
     SubArr = [10,20,30,40,50,60],
     SubObj = [{<<"a">>, 11}, {<<"b">>, 12}],
-    Obj = [{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    Obj = from_list([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}]),
     ?assertEqual({ok, 1},
                  jsxd:get(<<"int">>, Obj)),
     ?assertEqual(not_found,
@@ -276,7 +326,7 @@ get_obj_test() ->
 
 set_arr_test() ->
     SubArr = [10,20,30],
-    Arr = [1,SubArr,3],
+    Arr = from_list([1,SubArr,3]),
     ?assertEqual([99, SubArr, 3],
                  jsxd:set(0, 99, Arr)),
     ?assertEqual([1, SubArr, 99],
@@ -292,15 +342,15 @@ set_arr_test() ->
 set_obj_test() ->
     SubArr = [10,20,30],
     SubObj = [{<<"a">>, 11}, {<<"b">>, 12}],
-    Obj = [{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    Obj = from_list([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}]),
 
-    ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 2}],
+    ?assertEqual([{<<"b">>, SubArr}, {<<"int">>, 2}, {<<"obj">>, SubObj}],
                  jsxd:set(<<"int">>, 2, Obj)),
 
-    ?assertEqual([{<<"b">>, [10,99,30]}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    ?assertEqual([{<<"b">>, [10,99,30]}, {<<"int">>, 1}, {<<"obj">>, SubObj}],
                  jsxd:set([<<"b">>, 1], 99, Obj)),
 
-    ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, [{<<"a">>, 99}, {<<"b">>, 12}]}, {<<"int">>, 1}],
+    ?assertEqual([{<<"b">>, SubArr}, {<<"int">>, 1}, {<<"obj">>, [{<<"a">>, 99}, {<<"b">>, 12}]}],
                  jsxd:set([<<"obj">>, <<"a">>], 99, Obj)),
 
     ?assertEqual([{<<"x">>, 1}],
@@ -309,17 +359,17 @@ set_obj_test() ->
     ?assertEqual([{<<"x">>, [{<<"y">>, 1}]}],
                  jsxd:set([<<"x">>, <<"y">>], 1, [])),
 
-    ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, [{<<"a">>, 11}, {<<"b">>, 12}, {<<"c">>, 99}]}, {<<"int">>, 1}],
+    ?assertEqual([{<<"b">>, SubArr}, {<<"int">>, 1}, {<<"obj">>, [{<<"a">>, 11}, {<<"b">>, 12}, {<<"c">>, 99}]}],
                  jsxd:set([<<"obj">>, <<"c">>], 99, Obj)),
 
-    ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, [{<<"a">>, 11}, {<<"b">>, 12}, {<<"c">>, [{<<"c">>, 99}]}]}, {<<"int">>, 1}],
+    ?assertEqual([{<<"b">>, SubArr}, {<<"int">>, 1}, {<<"obj">>, [{<<"a">>, 11}, {<<"b">>, 12}, {<<"c">>, [{<<"c">>, 99}]}]}],
                  jsxd:set([<<"obj">>, <<"c">>, <<"c">>], 99, Obj)),
 
     ok.
 
 update_arr_test() ->
     SubArr = [10,20,30],
-    Arr = [1,SubArr,3],
+    Arr = from_list([1,SubArr,3]),
     Inc = fun(X) -> X + 1 end,
     ?assertEqual([2, SubArr, 3],
                  jsxd:update(0, Inc, Arr)),
@@ -338,11 +388,11 @@ update_arr_test() ->
 update_obj_test() ->
     SubArr = [10,20,30],
     SubObj = [{<<"a">>, 11}, {<<"b">>, 12}],
-    Obj = [{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    Obj = from_list([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}]),
     Inc = fun(X) -> X + 1 end,
-    ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 2}],
+    ?assertEqual([{<<"b">>, SubArr}, {<<"int">>, 2}, {<<"obj">>, SubObj}],
                  jsxd:update(<<"int">>, Inc , Obj)),
-    ?assertEqual([{<<"b">>, [10,21,30]}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    ?assertEqual([{<<"b">>, [10,21,30]}, {<<"int">>, 1}, {<<"obj">>, SubObj}],
                  jsxd:update([<<"b">>, 1], Inc , Obj)),
     ?assertEqual(Obj,
                  jsxd:update([<<"x">>, 1], Inc , Obj)),
@@ -355,7 +405,7 @@ update_obj_test() ->
 
 delete_arr_test() ->
     SubArr = [10,20,30],
-    Arr = [1,SubArr,3],
+    Arr = from_list([1,SubArr,3]),
     ?assertEqual([SubArr, 3],
                  jsxd:delete(0, Arr)),
     ok.
@@ -363,12 +413,12 @@ delete_arr_test() ->
 delete_obj_test() ->
     SubArr = [10,20,30],
     SubObj = [{<<"a">>, 11}, {<<"b">>, 12}],
-    Obj = [{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}],
+    Obj = from_list([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}]),
     ?assertEqual([{<<"b">>, SubArr}, {<<"obj">>, SubObj}],
                  jsxd:delete(<<"int">> , Obj)),
     ok.
 map_arr_test() ->
-    Arr = [1,3,6],
+    Arr = from_list([1,3,6]),
     ?assertEqual([2*6, 1*3, 0*1],
                  jsxd:map(fun(Idx,Val) ->
                                   Idx*Val
@@ -388,16 +438,27 @@ reduce_arr_test() ->
     ?assertEqual(0*1+1*3+2*6,
                  jsxd:reduce(fun(Idx, Val, Acc) ->
                                      (Idx*Val) + Acc
-                          end, 0, Arr)),
+                             end, 0, Arr)),
     ok.
 
 reduce_obj_test() ->
-    Obj = [{<<"a">>,1},{<<"b">>, 2},{<<"c">>, 3}],
+    Obj = from_list([{<<"a">>,1},{<<"b">>, 2},{<<"c">>, 3}]),
     ?assertEqual(1+2+3,
                  jsxd:reduce(fun(_K, Val, Acc) ->
-                                  Val + Acc
-                          end, 0, Obj)),
+                                     Val + Acc
+                             end, 0, Obj)),
     ok.
 
+merge_test() ->
+    Obj1 = from_list([{<<"a">>, 1}, {<<"b">>, 2}, {<<"d">>, 4}, {<<"f">>, 6}]),
+    Obj2 = from_list([{<<"b">>, 99}, {<<"c">>, 3}, {<<"e">>, 5}]),
+    ?assertEqual([{<<"a">>, 1}, {<<"b">>, 2}, {<<"c">>, 3}, {<<"d">>, 4}, {<<"e">>, 5}, {<<"f">>, 6}],
+                 jsxd:merge(Obj1, Obj2)).
+
+merge_conf_test() ->
+    Obj1 = from_list([{<<"b">>, 1}, {<<"c">>, 3}, {<<"e">>, 5}]),
+    Obj2 = from_list([{<<"a">>, 1}, {<<"b">>, 1}, {<<"d">>, 4}, {<<"f">>, 6}]),
+    ?assertEqual([{<<"a">>, 1}, {<<"b">>, 2}, {<<"c">>, 3}, {<<"d">>, 4}, {<<"e">>, 5}, {<<"f">>, 6}],
+                 jsxd:merge(fun(_, A, B) -> A + B end, Obj1, Obj2)).
 
 -endif.

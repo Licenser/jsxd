@@ -1,21 +1,22 @@
 General
 =======
-jsxd is a library to sanely work with nested data structures as [jsx](https://github.com/talentdeficit/jsx) produces. The data structures can represent objects (key value lists) or arrays (lists).
-
+jsxd is a library to sanely work with nested data structures as [jsx](https://github.com/talentdeficit/jsx) produces. The data structures can represent objects (key value lists) or arrays (lists). Be aware that keys in an object are **OREDERED** based on compairison and not on adding order.
 
 index
-
+-----
 * General
   - [Keys](#Keys)
 * Functions
+  - [from_list/1](#from_list-1)
   - [get/2](#get-2)
   - [set/3](#set-3)
   - [delete/2](#delete-2)
   - [update/3](#update-3)
   - [map/3](#map-3)
   - [reduce/3](#reduce-3)
-
-
+  - [thread/2](#thread-3)
+  - [merge/2](#merge-2)
+  - [merge/3](#merge-3)
 
 Keys
 ----
@@ -23,6 +24,11 @@ Keys is the abstraction over the Path in the nested structure that jsxd uses to 
 * a `integer` in the case of array addressing **(be aware that we start at 0!)**
 * a `binary` in case of object addressing
 * a list of `keys` when addressing a nested value
+
+from_list/1
+------------
+From list creates a valid jsdx object form a list. It transverses the structure, arrays are not changed but objects are sorted by key, duplicate keys are **not** deleted!
+
 
 get/2
 ------------
@@ -87,3 +93,28 @@ Maps over an object. The mapping function gets two values, the first being the k
 reduce/4
 --------
 Reduces over an object, in the way `foldl` or `foldr` does, it's called reduced since order isn't guaranteed in objects, internally so it uses foldl. The reduce function gets three arguments, the key or index, the value and the accumulator, it returns a new accumulator.
+
+merge/2
+-------
+Merges two objects, different keys from both objects are combined. If a key exists in both objects the value from the **first** object is taken.
+
+merge/3
+-------
+Merges two objects, different keys from both objects are combined. If a key exists in both objects the ConflictFn is called with three paramters, the `key`, the value from the first object and the value of the second object.
+
+
+thread/2
+--------
+This function threads an object through a list of changing functions, it's a simple utility function to help preventing huge chains of command. The theated object is always entered as the last element of a call, valid calls are:
+
+
+* {[set](#set-3), Key, Value}
+* {[delete](#delete-2), Key}
+* {[update](#update-3), Key, UpdateFn}
+* {[update](#update-4), Key, UpdateFn, Default}
+* {[map](#map-2), MapFn}
+* {[merge](#merge-2), Obj1}
+* {[merge](#merge-3), ConflictFn, Obj1}
+
+
+
