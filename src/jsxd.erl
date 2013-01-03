@@ -221,6 +221,9 @@ acc_merge(ConflictFn, Obj1, [{K2, V2}|Obj2], ObjAcc) ->
 acc_merge(ConflictFn, Obj1, [], ObjAcc) ->
     acc_merge(ConflictFn,[], [], ObjAcc ++ Obj1).
 
+thread([], Obj) ->
+    Obj;
+
 thread([{set, K, V}|As], Obj) ->
     thread(As, jsxd:set(K, V, Obj));
 
@@ -241,7 +244,6 @@ thread([{merge,ConflictFn, Obj1}|As], Obj) ->
 
 thread([{map, Fn}|As], Obj) ->
     thread(As, jsxd:map(Fn, Obj)).
-
 
 %%%===================================================================
 %%% Internal functions
