@@ -13,7 +13,7 @@
          update/3,
          update/4,
          map/2,
-         reduce/3,
+         fold/3,
          merge/2,
          merge/3,
          thread/2]).
@@ -185,14 +185,14 @@ map(MapFn, Obj) ->
 
 
 
-reduce(ReduceFn, Acc0, [{_, _} | _] = Obj) ->
+fold(FoldFn, Acc0, [{_, _} | _] = Obj) ->
     lists:foldl(fun ({K, V}, Acc) ->
-                        ReduceFn(K, V, Acc)
+                        FoldFn(K, V, Acc)
                 end, Acc0, Obj);
 
-reduce(ReduceFn, Acc0, Obj) ->
+fold(FoldFn, Acc0, Obj) ->
     {_, Res} = lists:foldl(fun (Elem, {I, Acc}) ->
-                                   {I + 1, ReduceFn(I, Elem, Acc)}
+                                   {I + 1, FoldFn(I, Elem, Acc)}
                            end, {0, Acc0}, Obj),
     Res.
 
@@ -435,18 +435,18 @@ map_obj_test() ->
                           end, Obj)),
     ok.
 
-reduce_arr_test() ->
+fold_arr_test() ->
     Arr = [1,3,6],
     ?assertEqual(0*1+1*3+2*6,
-                 jsxd:reduce(fun(Idx, Val, Acc) ->
+                 jsxd:fold(fun(Idx, Val, Acc) ->
                                      (Idx*Val) + Acc
                              end, 0, Arr)),
     ok.
 
-reduce_obj_test() ->
+fold_obj_test() ->
     Obj = from_list([{<<"a">>,1},{<<"b">>, 2},{<<"c">>, 3}]),
     ?assertEqual(1+2+3,
-                 jsxd:reduce(fun(_K, Val, Acc) ->
+                 jsxd:fold(fun(_K, Val, Acc) ->
                                      Val + Acc
                              end, 0, Obj)),
     ok.
