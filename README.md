@@ -1,6 +1,6 @@
 General
 =======
-jsxd is a library to sanely work with nested data structures as [jsx](https://github.com/talentdeficit/jsx) produces. The data structures can represent objects (key value lists) or arrays (lists). Be aware that keys in an object are **OREDERED** based on comparison and not on adding order.
+jsxd is a library to sanely work with nested data structures as [jsx](https://github.com/talentdeficit/jsx) produces. The data structures can represent objects (key value lists) or arrays (lists). Be aware that keys in an object are **ordered** based on comparison and not on adding order.
 
 index
 -----
