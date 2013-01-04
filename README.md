@@ -7,16 +7,16 @@ index
 * General
   - [Keys](#Keys)
 * Functions
-  - [from_list/1](#from_list-1)
-  - [get/2](#get-2)
-  - [set/3](#set-3)
-  - [delete/2](#delete-2)
-  - [update/3](#update-3)
-  - [map/3](#map-3)
-  - [fold/3](#fold-3)
-  - [thread/2](#thread-3)
-  - [merge/2](#merge-2)
-  - [merge/3](#merge-3)
+  - [from_list/1](#from_list1)
+  - [get/2](#get2)
+  - [set/3](#set3)
+  - [delete/2](#delete2)
+  - [update/3](#update3)
+  - [map/3](#map3)
+  - [fold/3](#fold3)
+  - [merge/2](#merge2)
+  - [merge/3](#merge3)
+  - [thread/2](#thread3)
 
 Keys
 ----
@@ -108,13 +108,13 @@ thread/2
 This function threads an object through a list of changing functions, it's a simple utility function to help preventing huge chains of commands. The treated object is always entered as the last element of a call, valid calls are:
 
 
-* {[set](#set-3), Key, Value}
-* {[delete](#delete-2), Key}
-* {[update](#update-3), Key, UpdateFn}
-* {[update](#update-4), Key, UpdateFn, Default}
-* {[map](#map-2), MapFn}
-* {[merge](#merge-2), Obj1}
-* {[merge](#merge-3), ConflictFn, Obj1}
+* {[set](#set3), Key, Value}
+* {[delete](#delete2), Key}
+* {[update](#update3), Key, UpdateFn}
+* {[update](#update4), Key, UpdateFn, Default}
+* {[map](#map2), MapFn}
+* {[merge](#merge2), Obj1}
+* {[merge](#merge3), ConflictFn, Obj1}
 
 
 
