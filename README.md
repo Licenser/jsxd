@@ -40,7 +40,7 @@ Object = [{<<"a">>, 1}, {<<"b">>, [10, 20, 30]}].
 {ok, 1} = jsxd:get(<<"a">>, Object).
 {ok, 20} = jsxd:get([<<"b">>, 1], Object).
 not_found = jsxd:get([<<"b">>, 1,2], Object).
-```¯
+```
 
 get/3
 ------------
