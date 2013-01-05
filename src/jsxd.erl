@@ -103,6 +103,9 @@ get([Key | Keys], Obj) when is_list(Obj),
             undefined
     end.
 
+set([], Val, _Obj) ->
+    Val;
+
 set(Key, Val, Obj) when not is_list(Key) ->
     set([Key], Val, Obj);
 
