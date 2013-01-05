@@ -12,6 +12,8 @@ index
   - [set/3](#set3)
   - [delete/2](#delete2)
   - [update/3](#update3)
+  - [append/3](#append3)
+  - [prepend/3](#prepend3)  
   - [map/3](#map3)
   - [fold/3](#fold3)
   - [merge/2](#merge2)
@@ -33,19 +35,19 @@ From list creates a valid jsdx object form a list. It transverses the structure,
 get/2
 ------------
 
-jsxd exports `get/2` method to read data the parameters passed are a key or list of keys, it either returns `{ok, <value>}` or `not_found`.
+jsxd exports `get/2` method to read data the parameters passed are a key or list of keys, it either returns `{ok, <value>}` or `undefined`.
 
 ```erlang
 Object = [{<<"a">>, 1}, {<<"b">>, [10, 20, 30]}].
 {ok, 1} = jsxd:get(<<"a">>, Object).
 {ok, 20} = jsxd:get([<<"b">>, 1], Object).
-not_found = jsxd:get([<<"b">>, 1,2], Object).
+undefined = jsxd:get([<<"b">>, 1,2], Object).
 ```
 
 get/3
 ------------
 
-`get/3` is a get method with a default value, it will never not return `not_found` or a `{ok, _}` tuple but instead always a value, either the one found or the default provided.
+`get/3` is a get method with a default value, it will never not return `undefined` or a `{ok, _}` tuple but instead always a value, either the one found or the default provided.
 
 ```erlang
 Object = [{<<"a">>, 1}].
@@ -85,6 +87,14 @@ Updating works the same as setting data with the difference that instead of a ne
 
 [{<<"a">>, 1}, {<<"b">>, [10, 21, 30]}] = jsxd:update([<<"b">>, 1], fun(X) -> X+1 end, [{<<"a">>, 1}, {<<"b">>, [10, 20, 30]}]).
 ```
+
+append/3
+--------
+Append a value to an array defined by the key. If the array does not exist a new array at that path is created. If the object at the path is not an array an error is thrown.
+
+prepend/3
+---------
+The same as append just that it does add the new element at the start of the array, this is **much more efficient** since arryas are stored Lists. This means if you want to add to an array and don't care for order, use this.
 
 map/3
 -----
