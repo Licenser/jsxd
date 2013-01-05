@@ -55,7 +55,9 @@ Object = [{<<"a">>, 1}].
 42 = jsxd:get([<<"b">>, 1,2], 42, Object).
 ```
 
-
+select/2
+--------
+Selects keys from an object, this does not work recursively, the first argument is a just of keys to keep, all other keys will be dropped.
 
 set/3
 ------------

@@ -8,6 +8,7 @@
          from_list/1,
          get/2,
          get/3,
+         select/2,
          set/3,
          delete/2,
          update/3,
@@ -102,6 +103,25 @@ get([Key | Keys], Obj) when is_list(Obj),
         _ ->
             undefined
     end.
+
+
+select(Keys, Obj) ->
+    select_int(ordsets:from_list(Keys), Obj).
+
+select_int([], _) ->
+    jsxd:new();
+
+select_int(_, []) ->
+    jsxd:new();
+
+select_int([Key | Keys], [{Key, V} | Obj]) ->
+    [{Key, V} | select_int(Keys, Obj)];
+
+select_int([Key1 | Keys], [{Key2, _} | _] = Obj) when Key1 < Key2 ->
+    select_int(Keys, Obj);
+
+select_int([Key1 | _] = Keys, [{Key2, _} | Obj]) when Key1 > Key2 ->
+    select(Keys, Obj).
 
 set([], Val, _Obj) ->
     Val;
@@ -348,6 +368,15 @@ get_obj_test() ->
                  jsxd:get([<<"b">>, 1], Obj)),
     ?assertEqual({ok, 11},
                  jsxd:get([<<"obj">>, <<"a">>], Obj)).
+
+select_test() ->
+    Obj = from_list([{<<"b">>, 1}, {<<"obj">>, 2}, {<<"int">>, 3}]),
+    ?assertEqual([{<<"obj">>, 2}],
+                 jsxd:select([<<"obj">>], Obj)),
+    ?assertEqual([{<<"b">>, 1}],
+                 jsxd:select([<<"b">>], Obj)),
+    ?assertEqual([{<<"b">>, 1}, {<<"obj">>, 2}],
+                 jsxd:select([<<"b">>, <<"obj">>], Obj)).
 
 set_arr_test() ->
     SubArr = [10,20,30],
