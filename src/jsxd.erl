@@ -104,7 +104,6 @@ get([Key | Keys], Obj) when is_list(Obj),
             undefined
     end.
 
-
 select(Keys, Obj) ->
     select_int(ordsets:from_list(Keys), Obj).
 
@@ -266,6 +265,9 @@ acc_merge(ConflictFn, Obj1, [], ObjAcc) ->
 
 thread([], Obj) ->
     Obj;
+
+thread([{select, Ks}|As], Obj) ->
+    thread(As, jsxd:select(Ks, Obj));
 
 thread([{set, K, V}|As], Obj) ->
     thread(As, jsxd:set(K, V, Obj));

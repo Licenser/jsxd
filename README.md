@@ -119,7 +119,7 @@ thread/2
 --------
 This function threads an object through a list of changing functions, it's a simple utility function to help preventing huge chains of commands. The treated object is always entered as the last element of a call, valid calls are:
 
-
+* {[select](#select2), Keys}
 * {[set](#set3), Key, Value}
 * {[delete](#delete2), Key}
 * {[update](#update3), Key, UpdateFn}
