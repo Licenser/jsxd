@@ -12,6 +12,8 @@
          delete/2,
          update/3,
          update/4,
+         append/3,
+         prepend/3,
          map/2,
          fold/3,
          merge/2,
@@ -76,7 +78,7 @@ get([Pos], [H | _T] = Arr) when is_integer(Pos),
             {ok, Value}
     catch
         _:_ ->
-            not_found
+            undefined
     end;
 
 get([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
@@ -84,12 +86,12 @@ get([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
         {Key, Value} ->
             {ok, Value};
         _ ->
-            not_found
+            undefined
     end;
 
 %% This faults when the key has a wrong format.
 get([_Key], _Obj) ->
-    not_found;
+    undefined;
 
 get([Key | Keys], Obj) when is_list(Obj),
                             (is_binary(Key) orelse
@@ -98,7 +100,7 @@ get([Key | Keys], Obj) when is_list(Obj),
         {ok, Obj1} when is_list(Obj1) ->
             jsxd:get(Keys, Obj1);
         _ ->
-            not_found
+            undefined
     end.
 
 set(Key, Val, Obj) when not is_list(Key) ->
@@ -156,7 +158,7 @@ delete(Keys, Obj) ->
 
 update(Keys, UpdateFn, Obj) ->
     case jsxd:get(Keys, Obj) of
-        not_found ->
+        undefined ->
             Obj;
         {ok, Val} ->
             jsxd:set(Keys, UpdateFn(Val), Obj)
@@ -164,11 +166,29 @@ update(Keys, UpdateFn, Obj) ->
 
 update(Keys, UpdateFn, Default, Obj) ->
     case jsxd:get(Keys, Obj) of
-        not_found ->
+        undefined ->
             jsxd:set(Keys, Default, Obj);
         {ok, Val} ->
             jsxd:set(Keys, UpdateFn(Val), Obj)
     end.
+
+append(Keys, Value, Obj) ->
+    jsxd:update(Keys, fun([{_,_} | _]) ->
+                              error(bad_argument);
+                         (L) when is_list(L) ->
+                              L ++ [Value];
+                         (_) ->
+                              error(bad_argument)
+                      end, [Value], Obj).
+
+prepend(Keys, Value, Obj) ->
+    jsxd:update(Keys, fun([{_,_} | _]) ->
+                              error(bad_argument);
+                         (L) when is_list(L) ->
+                              [Value | L];
+                         (_) ->
+                              error(bad_argument)
+                      end, [Value], Obj).
 
 
 map(MapFn, [{_, _} | _] = Obj) ->
@@ -297,13 +317,13 @@ get_arr_test() ->
                  jsxd:get(1, Arr)),
     ?assertEqual({ok, 6},
                  jsxd:get(5, Arr)),
-    ?assertEqual(not_found,
+    ?assertEqual(undefined,
                  jsxd:get(6, Arr)),
     ?assertEqual({ok, 10},
                  jsxd:get([1,0], Arr)),
     ?assertEqual({ok, 60},
                  jsxd:get([1,5], Arr)),
-    ?assertEqual(not_found,
+    ?assertEqual(undefined,
                  jsxd:get([2,5], Arr)),
     ?assertEqual(42,
                  jsxd:get([2,5], 42, Arr)).
@@ -315,9 +335,9 @@ get_obj_test() ->
     Obj = from_list([{<<"b">>, SubArr}, {<<"obj">>, SubObj}, {<<"int">>, 1}]),
     ?assertEqual({ok, 1},
                  jsxd:get(<<"int">>, Obj)),
-    ?assertEqual(not_found,
+    ?assertEqual(undefined,
                  jsxd:get(<<"float">>, Obj)),
-    ?assertEqual(not_found,
+    ?assertEqual(undefined,
                  jsxd:get(1, Obj)),
     ?assertEqual(42,
                  jsxd:get(1, 42, Obj)),
