@@ -108,7 +108,7 @@ Folds over an object, in the way `foldl` or `foldr` does. Order isn't guaranteed
 
 merge/2
 -------
-Merges two objects, different keys of both objects are combined. If a key exists in both objects the value of the **second** object is taken.
+Merges two objects, different keys of both objects are combined. If a key exists in both objects the value of the **second** object is taken.˘
 
 merge/3
 -------
@@ -121,6 +121,8 @@ This function threads an object through a list of changing functions, it's a sim
 
 * {[select](#select2), Keys}
 * {[set](#set3), Key, Value}
+* {[append](#append3), Key, Value}
+* {[prepend](#prepend3), Key, Value}
 * {[delete](#delete2), Key}
 * {[update](#update3), Key, UpdateFn}
 * {[update](#update4), Key, UpdateFn, Default}

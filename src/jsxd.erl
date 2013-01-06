@@ -272,6 +272,12 @@ thread([{select, Ks}|As], Obj) ->
 thread([{set, K, V}|As], Obj) ->
     thread(As, jsxd:set(K, V, Obj));
 
+thread([{append, K, V}|As], Obj) ->
+    thread(As, jsxd:append(K, V, Obj));
+
+thread([{prepend, K, V}|As], Obj) ->
+    thread(As, jsxd:append(K, V, Obj));
+
 thread([{delete, K}|As], Obj) ->
     thread(As, jsxd:delete(K, Obj));
 
