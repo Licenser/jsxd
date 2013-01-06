@@ -24,7 +24,7 @@ Keys
 ----
 Keys is the abstraction over the Path in the nested structure that jsxd uses to address a value, keys can be:
 * a `integer` in the case of array addressing **(be aware that we start at 0!)**
-* a `binary` in case of object addressing
+* a `binary` in case of object addressing, this may be a nested path in javascript'ish style as `a.b[2].c` also starting with a array index such as `<<"[1]">>` is valid and equivalent to a simple integer key as `[1]`.
 * a list of `keys` when addressing a nested value
 
 from_list/1

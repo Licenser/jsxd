@@ -62,8 +62,11 @@ get(Key, Default, Obj) ->
 -spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()}.
 
 get(Key, Obj) when is_list(Obj),
-                   (is_integer(Key) orelse
-                    is_binary(Key)) ->
+                   is_binary(Key) ->
+    get(parse_path(Key), Obj);
+
+get(Key, Obj) when is_list(Obj),
+                   is_integer(Key) ->
     get([Key], Obj);
 
 get([], Obj) ->
@@ -125,8 +128,11 @@ select_int([Key1 | _] = Keys, [{Key2, _} | Obj]) when Key1 > Key2 ->
 set([], Val, _Obj) ->
     Val;
 
-set(Key, Val, Obj) when not is_list(Key) ->
+set(Key, Val, Obj) when is_integer(Key)->
     set([Key], Val, Obj);
+
+set(Key, Val, Obj) when is_binary(Key) ->
+    set(parse_path(Key), Val, Obj);
 
 set([Pos], Val, [H | _T] = Arr) when is_integer(Pos),
                                      (is_number(H) orelse
@@ -148,8 +154,11 @@ set([Key], Val, []) when is_binary(Key) ->
 set([Key | [_ | _] = Keys], Value, Obj) ->
     jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
 
-delete(Key, Obj) when not is_list(Key)->
+delete(Key, Obj) when is_integer(Key)->
     delete([Key], Obj);
+
+delete(Key, Obj) when is_binary(Key)->
+    delete(parse_path(Key), Obj);
 
 
 delete([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
@@ -324,6 +333,17 @@ set_arr(Pos, Val, Arr) ->
             end,
     Head ++ Tail1.
 
+
+parse_path(P) ->
+    lists:map(fun ([$[ | N]) ->
+                      {X, []} = string:to_integer(N),
+                      X;
+                  (E) ->
+                      list_to_binary(E)
+              end,
+              lists:filter(fun (E) -> E =/= [] end,
+                           re:split(P, "\\.|(?:(\\[\\d)\\])", [trim, {return, list}]))).
+
 %%%===================================================================
 %%% Tests
 %%%===================================================================
@@ -375,7 +395,11 @@ get_obj_test() ->
     ?assertEqual({ok, 20},
                  jsxd:get([<<"b">>, 1], Obj)),
     ?assertEqual({ok, 11},
-                 jsxd:get([<<"obj">>, <<"a">>], Obj)).
+                 jsxd:get([<<"obj">>, <<"a">>], Obj)),
+    ?assertEqual({ok, 20},
+                 jsxd:get(<<"b[1]">>, Obj)),
+    ?assertEqual({ok, 11},
+                 jsxd:get(<<"obj.a">>, Obj)).
 
 select_test() ->
     Obj = from_list([{<<"b">>, 1}, {<<"obj">>, 2}, {<<"int">>, 3}]),
