@@ -333,7 +333,6 @@ set_arr(Pos, Val, Arr) ->
             end,
     Head ++ Tail1.
 
-
 parse_path(P) ->
     lists:map(fun ([$[ | N]) ->
                       {X, []} = string:to_integer(N),
