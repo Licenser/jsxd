@@ -70,7 +70,7 @@ get(Key, Obj) when is_list(Obj),
     get([Key], Obj);
 
 get([], Obj) ->
-    Obj;
+    {ok, Obj};
 
 get(_, [{}]) ->
     undefined;
