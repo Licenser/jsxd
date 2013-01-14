@@ -72,6 +72,9 @@ get(Key, Obj) when is_list(Obj),
 get([], Obj) ->
     Obj;
 
+get(_, [{}]) ->
+    undefined;
+
 get([Pos], [H | _T] = Arr) when is_integer(Pos),
                                 (is_number(H) orelse
                                  is_binary(H) orelse
@@ -147,6 +150,9 @@ set([Pos], Val, [] = Arr) when is_integer(Pos) ->
 set([Key], Val, [{_, _} | _T] = Obj) when is_binary(Key) ->
     ordsets:add_element({Key, Val},
                         lists:keydelete(Key, 1, Obj));
+
+set([Key], Val, [{}]) when is_binary(Key) ->
+    [{Key, Val}];
 
 set([Key], Val, []) when is_binary(Key) ->
     [{Key, Val}];
