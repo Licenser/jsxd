@@ -272,8 +272,14 @@ acc_merge(ConflictFn, [{K1, V1}|Obj1], [{K1, V2}|Obj2], ObjAcc) ->
 acc_merge(ConflictFn, [], Obj2, ObjAcc) ->
     acc_merge(ConflictFn, [], [], ObjAcc ++ Obj2);
 
+acc_merge(ConflictFn, [{}], Obj2, ObjAcc) ->
+    acc_merge(ConflictFn, [], [], ObjAcc ++ Obj2);
+
 acc_merge(ConflictFn, Obj1, [{K2, V2}|Obj2], ObjAcc) ->
     acc_merge(ConflictFn, Obj1, Obj2, [{K2, V2} | ObjAcc]);
+
+acc_merge(ConflictFn, Obj1, [{}], ObjAcc) ->
+    acc_merge(ConflictFn,[], [], ObjAcc ++ Obj1);
 
 acc_merge(ConflictFn, Obj1, [], ObjAcc) ->
     acc_merge(ConflictFn,[], [], ObjAcc ++ Obj1).
