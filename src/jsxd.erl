@@ -27,10 +27,11 @@
 
 -type value()::binary()|number()|object()|jsxarray()|null|true|false.
 
--type object()::[{key(), value()}].
+-type object()::[{binary(), value()}].
 
 -type jsxarray()::[value()].
 
+-spec from_list(value()) -> value().
 
 from_list([{_,_}|_] = Obj) ->
     Obj1 = ordsets:from_list(Obj),
@@ -59,7 +60,7 @@ get(Key, Default, Obj) ->
             Default
     end.
 
--spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()}.
+-spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()} | undefined.
 
 get(Key, Obj) when is_list(Obj),
                    is_binary(Key) ->
