@@ -1,6 +1,7 @@
 -module(jsxd).
 
 -ifdef(TEST).
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
@@ -111,6 +112,7 @@ get([Key | Keys], Obj) when is_list(Obj),
             undefined
     end.
 
+-spec select(Keys::[binary()], Obj::object()) -> Obj::object().
 select(Keys, Obj) ->
     select_int(ordsets:from_list(Keys), Obj).
 
@@ -254,7 +256,7 @@ fold(FoldFn, Acc0, Obj) ->
                            end, {0, Acc0}, Obj),
     Res.
 
-
+-spec merge(object(), object()) -> object().
 merge(Obj1, Obj2) ->
     merge(fun(_,V,_) -> V end, Obj1, Obj2).
 
@@ -558,5 +560,84 @@ merge_conf_test() ->
     Obj2 = from_list([{<<"a">>, 1}, {<<"b">>, 1}, {<<"d">>, 4}, {<<"f">>, 6}]),
     ?assertEqual([{<<"a">>, 1}, {<<"b">>, 2}, {<<"c">>, 3}, {<<"d">>, 4}, {<<"e">>, 5}, {<<"f">>, 6}],
                  jsxd:merge(fun(_, A, B) -> A + B end, Obj1, Obj2)).
+
+key() ->
+    ?LET(Cs,
+         non_empty(
+           list(oneof(
+                  [$a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l, $m,
+                   $n, $o, $p, $q, $r, $s, $t, $u, $v, $w, $x, $y, $z,
+                   $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L, $M,
+                   $N, $O, $P, $Q, $R, $S, $T, $U, $V, $W, $X, $Y, $Z]))),
+         list_to_binary(Cs)).
+
+keys() ->
+    non_empty(list(key())).
+
+
+value() ->
+    ?SIZED(Size, value(Size)).
+
+value(0) ->
+    oneof([binary(), number(), null, true, false]);
+
+value(S) ->
+    ?LAZY(weighted_union(
+            [{1, object(S-1)},
+             {30, value(0)}])).
+
+array() ->
+    list(value()).
+
+object() ->
+    ?SIZED(Size, object(Size)).
+
+object(N) ->
+    list({key(), value(N)}).
+
+prop_delete() ->
+    ?FORALL({K,O}, {keys(), object()},
+            jsxd:get(K, delete(K, O)) =:= undefined).
+
+prop_set_get() ->
+    ?FORALL({K, V, O}, {keys(), value(), object()},
+            jsxd:get(K, jsxd:set(K, V, O)) =:= {ok, V}).
+
+prop_append() ->
+    ?FORALL({K, V, L, O},
+            {keys(), value(), array(), object()},
+            begin
+                O1 = jsxd:set(K, L, O),
+                O2 = jsxd:append(K, V, O1),
+                jsxd:get(K, O2) =:= {ok, L ++ [V]}
+            end).
+
+prop_prepend() ->
+    ?FORALL({K, V, L, O},
+            {keys(), value(), array(), object()},
+            begin
+                O1 = jsxd:set(K, L, O),
+                O2 = jsxd:prepend(K, V, O1),
+                jsxd:get(K, O2) =:= {ok, [V | L]}
+            end).
+
+proper_test_() ->
+    % sleep for 10 seconds
+    {timeout, 60, ?_assertEqual([], proper:module(?MODULE, [{to_file, user}, long_result]))}.
+
+proper_test() ->
+    ?assertEqual(true, proper:check_spec({jsxd, new, 0}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, from_list, 1}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, select, 2}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, set, 3}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, delete, 2}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, update, 3}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, update, 4}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, map, 2}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, fold, 3}, [{to_file, user}, long_result])),
+    ?assertEqual(true, proper:check_spec({jsxd, merge, 2}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, merge, 3}, [{to_file, user}, long_result])),
+    %% ?assertEqual(true, proper:check_spec({jsxd, thread, 2}, [{to_file, user}, long_result])),
+    ok.
 
 -endif.
