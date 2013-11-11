@@ -32,6 +32,8 @@
 
 -type jsxarray()::[value()].
 
+-export_type([key/0, keys/0, value/0, object/0, jsxarray/0]).
+
 -spec from_list(value()) -> value().
 
 from_list([{_,_}|_] = Obj) ->
@@ -622,7 +624,6 @@ prop_prepend() ->
             end).
 
 proper_test_() ->
-    % sleep for 10 seconds
     {timeout, 60, ?_assertEqual([], proper:module(?MODULE, [{to_file, user}, long_result]))}.
 
 proper_test() ->
