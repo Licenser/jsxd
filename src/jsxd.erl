@@ -30,7 +30,7 @@
 
 -type object()::[{binary(), value()}].
 
--type jsxarray()::[value()].
+-type jsxarray()::[value()] | [{}].
 
 -export_type([key/0, keys/0, value/0, object/0, jsxarray/0]).
 
