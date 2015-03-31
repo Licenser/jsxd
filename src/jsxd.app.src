@@ -7,6 +7,5 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { jsxd_app, []}},
   {env, []}
  ]}.
