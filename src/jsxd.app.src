@@ -1,11 +1,14 @@
 {application, jsxd,
  [
-  {description, ""},
-  {vsn, "0.1.9"},
+  {description, "jsx data structire traversing and modification library."},
+  {vsn, "0.1.10"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {env, []}
+  {env, []},
+  {contributors, ["Heinz N. Gies"]},
+  {licenses, ["CDDL"]},
+  {links, [{"Github", "https://github.com/Licenser/jsxd"}]}
  ]}.

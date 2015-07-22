@@ -2,3 +2,5 @@ ebin
 deps
 .eunit
 *~
+_build
+doc

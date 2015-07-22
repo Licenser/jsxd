@@ -1,4 +1,4 @@
--module(jsxd).
+-module(jsxd_eqc).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
