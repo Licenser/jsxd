@@ -17,13 +17,15 @@
          merge/3,
          thread/2]).
 
--type key()::binary()|integer().
+-type map_key() :: binary()|atom().
+
+-type key()::integer()|map_key().
 
 -type keys()::key()|[key()].
 
 -type value()::binary()|number()|object()|jsxarray()|null|true|false.
 
--type object()::[{binary(), value()}].
+-type object()::[{map_key(), value()}] | map().
 
 -type jsxarray()::[value()] | [{}].
 
@@ -31,14 +33,16 @@
 
 -spec from_list(value()) -> value().
 
+-define(IS_KEY(Key), (is_binary(Key) orelse is_atom(Key))).
+
 from_list([{_,_}|_] = Obj) ->
-    Obj1 = ordsets:from_list(Obj),
-    jsxd:map(fun (_, E) ->
+    Obj1 = maps:from_list(Obj),
+    maps:map(fun (_, E) ->
                      jsxd:from_list(E)
              end, Obj1);
 
 from_list(Obj) when is_list(Obj) ->
-    lists:map(fun jsxd:from_list/1, Obj);
+    [jsxd:from_list(O) || O <- Obj];
 
 from_list(Obj) ->
     Obj.
@@ -60,18 +64,21 @@ get(Key, Default, Obj) ->
 
 -spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()} | undefined.
 
-get(Key, Obj) when is_list(Obj),
+get(Key, Obj) when (is_list(Obj) orelse is_map(Obj)),
                    is_binary(Key) ->
     get(parse_path(Key), Obj);
 
 get(Key, Obj) when is_list(Obj),
-                   is_integer(Key) ->
+                   (is_integer(Key) orelse is_atom(Key)) ->
     get([Key], Obj);
 
 get([], Obj) ->
     {ok, Obj};
 
 get(_, [{}]) ->
+    undefined;
+
+get(_Key, #{}) when is_integer(_Key) ->
     undefined;
 
 get([Pos], [H | _T] = Arr) when is_integer(Pos),
@@ -87,7 +94,17 @@ get([Pos], [H | _T] = Arr) when is_integer(Pos),
             undefined
     end;
 
-get([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
+get([Key], Obj) when ?IS_KEY(Key),
+                     is_map(Obj) ->
+    case maps:find(Key, Obj) of
+        error ->
+            undefined;
+        R ->
+            R
+    end;
+
+get([Key], [{_, _} | _T] = Obj)
+  when is_binary(Key) orelse is_atom(Key) ->
     case lists:keyfind(Key, 1, Obj) of
         {Key, Value} ->
             {ok, Value};
@@ -95,21 +112,24 @@ get([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
             undefined
     end;
 
+
 %% This faults when the key has a wrong format.
 get([_Key], _Obj) ->
     undefined;
 
-get([Key | Keys], Obj) when is_list(Obj),
-                            (is_binary(Key) orelse
-                             is_integer(Key)) ->
+get([Key | Keys], Obj) when (is_integer(Key) orelse is_atom(Key)
+                             orelse is_binary(Key)),
+                            (is_list(Obj) orelse is_map(Obj)) ->
     case jsxd:get([Key], Obj) of
-        {ok, Obj1} when is_list(Obj1) ->
+        {ok, Obj1} when is_list(Obj1); is_map(Obj1) ->
             jsxd:get(Keys, Obj1);
         _ ->
             undefined
     end.
 
--spec select(Keys::[binary()], Obj::object()) -> Obj::object().
+-spec select(Keys::[key()], Obj::object()) -> Obj::object().
+select(Keys, Obj) when is_map(Obj) ->
+    maps:with(Keys, Obj);
 select(Keys, Obj) ->
     select_int(ordsets:from_list(Keys), Obj).
 
@@ -147,15 +167,18 @@ set([Pos], Val, [H | _T] = Arr) when is_integer(Pos),
 set([Pos], Val, [] = Arr) when is_integer(Pos) ->
     set_arr(Pos, Val, Arr);
 
-set([Key], Val, [{_, _} | _T] = Obj) when is_binary(Key) ->
+set([Key], Val, Obj) when ?IS_KEY(Key), is_map(Obj) ->
+    Obj#{Key => Val};
+
+set([Key], Val, [{_, _} | _T] = Obj) when ?IS_KEY(Key) ->
     ordsets:add_element({Key, Val},
                         lists:keydelete(Key, 1, Obj));
 
 set([Key], Val, [{}]) when is_binary(Key) ->
-    [{Key, Val}];
+    #{Key => Val};
 
 set([Key], Val, []) when is_binary(Key) ->
-    [{Key, Val}];
+    #{Key => Val};
 
 set([Key | [_ | _] = Keys], Value, Obj) ->
     jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
@@ -166,6 +189,15 @@ delete(Key, Obj) when is_integer(Key)->
 delete(Key, Obj) when is_binary(Key)->
     delete(parse_path(Key), Obj);
 
+
+delete([Key], Obj) when (is_binary(Key) orelse is_atom(Key)),
+                        is_map(Obj) ->
+    case maps:is_key(Key, Obj) of
+        true ->
+            maps:remove(Key, Obj);
+        false ->
+            Obj
+    end;
 
 delete([Key], [{_, _} | _T] = Obj) when is_binary(Key) ->
     lists:keydelete(Key, 1, Obj);
@@ -228,6 +260,8 @@ prepend(Keys, Value, Obj) ->
                       end, [Value], Obj).
 
 
+map(MapFn, Obj) when is_map(Obj) ->
+    maps:map(MapFn, Obj);
 map(MapFn, [{_, _} | _] = Obj) ->
     lists:map(fun ({K, V}) ->
                       V1 = MapFn(K, V),
@@ -241,6 +275,8 @@ map(MapFn, Obj) ->
     Res.
 
 
+fold(FoldFn, Acc0, Obj) when is_map(Obj) ->
+    maps:fold(FoldFn, Acc0, Obj);
 
 fold(FoldFn, Acc0, [{_, _} | _] = Obj) ->
     lists:foldl(fun ({K, V}, Acc) ->
@@ -254,11 +290,18 @@ fold(FoldFn, Acc0, Obj) ->
     Res.
 
 -spec merge(object(), object()) -> object().
+merge(Obj1, Obj2) when is_map(Obj1), is_map(Obj2) ->
+    maps:merge(Obj2, Obj1);
+
 merge(Obj1, Obj2) ->
     merge(fun(_,V,_) -> V end, Obj1, Obj2).
 
+merge(ConflictFn, Obj1, Obj2) when is_map(Obj1) ->
+    merge(ConflictFn, lists:sort(maps:to_list(Obj1)), Obj2);
+merge(ConflictFn, Obj1, Obj2) when is_map(Obj2) ->
+    merge(ConflictFn, Obj1, lists:sort(maps:to_list(Obj2)));
 merge(ConflictFn, Obj1, Obj2) ->
-    acc_merge(ConflictFn, Obj1, Obj2, []).
+    maps:from_list(acc_merge(ConflictFn, Obj1, Obj2, [])).
 
 acc_merge(_ConflictFn, [], [], ObjAcc) ->
     ordsets:from_list(ObjAcc);
