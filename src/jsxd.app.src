@@ -4,6 +4,6 @@
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {contributors,["Heinz N. Gies"]},
+              {maintainers,["Heinz N. Gies"]},
               {licenses,["CDDL"]},
               {links,[{"Github","https://github.com/Licenser/jsxd"}]}]}.
