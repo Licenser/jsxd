@@ -1,0 +1,8 @@
+** this is the overview.doc file for the application 'jsx' **
+
+   @author Heinz N. Gies <heinz@project-fifo.net>
+   @copyright 2016 Project-FiFo UG
+   @version 0.2.1
+   @title Library to work with json like data.
+   @doc This library provdes tools to manipulate json like data for both
+   objects and arrays. JSX and jsonp like output is suppored.

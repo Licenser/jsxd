@@ -23,11 +23,8 @@ keys() ->
     non_empty(list(key())).
 
 
-double() ->
-    ?LET(I, int(), I/100).
-
 number() ->
-    oneof([double(), int()]).
+    oneof([real(), int()]).
 
 value() ->
     ?SIZED(Size, value(Size)).
@@ -49,17 +46,36 @@ object() ->
 object(N) ->
     list({key(), value(N)}).
 
+valid_key([], _O)  ->
+    true;
+valid_key([K | R], O) when is_list(O); is_map(O)->
+    case jsxd:get([K], O) of
+        {ok, O1} ->
+            valid_key(R, O1);
+        undefined ->
+            true
+    end;
+valid_key(_, _) ->
+    false.
+
+
+ko() ->
+    ?SUCHTHAT(
+       {K, O},
+       {keys(), object()},
+       valid_key(K,O)).
+
 prop_delete() ->
-    ?FORALL({K,O}, {keys(), object()},
+    ?FORALL({K,O}, ko(),
             jsxd:get(K, jsxd:delete(K, O)) =:= undefined).
 
 prop_set_get() ->
-    ?FORALL({K, V, O}, {keys(), value(), object()},
+    ?FORALL({{K, O}, V}, {ko(), value()},
             jsxd:get(K, jsxd:set(K, V, O)) =:= {ok, V}).
 
 prop_append() ->
-    ?FORALL({K, V, L, O},
-            {keys(), value(), array(), object()},
+    ?FORALL({{K, O}, V, L},
+            {ko(), value(), array()},
             begin
                 O1 = jsxd:set(K, L, O),
                 O2 = jsxd:append(K, V, O1),
@@ -67,8 +83,8 @@ prop_append() ->
             end).
 
 prop_prepend() ->
-    ?FORALL({K, V, L, O},
-            {keys(), value(), array(), object()},
+    ?FORALL({{K, O}, V, L},
+            {ko(), value(), array()},
             begin
                 O1 = jsxd:set(K, L, O),
                 O2 = jsxd:prepend(K, V, O1),

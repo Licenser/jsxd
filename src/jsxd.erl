@@ -35,6 +35,14 @@
 
 -define(IS_KEY(Key), (is_binary(Key) orelse is_atom(Key))).
 
+%%--------------------------------------------------------------------
+%% @doc Converts a tuple list (or 'array' list) to a object jsxd
+%% understands.
+%%
+%% Maps can be passed in directly without needing conversion.
+%% @end
+%%--------------------------------------------------------------------
+
 from_list([{_,_}|_] = Obj) ->
     Obj1 = maps:from_list(Obj),
     maps:map(fun (_, E) ->
@@ -47,11 +55,23 @@ from_list(Obj) when is_list(Obj) ->
 from_list(Obj) ->
     Obj.
 
+%%--------------------------------------------------------------------
+%% @doc Creates an empty jsxd structure.
+%% @end
+%%--------------------------------------------------------------------
 -spec new() -> jsxarray() | object().
-
 new() ->
     [].
 
+%%--------------------------------------------------------------------
+%% @doc Gets a possibly nested key in a jsxd structure, if the key
+%% is a binary it is assumed to be 'unparsed' and will be translated.
+%%
+%% To set a single binary key direcntly pass in [Key].
+%%
+%% If the key is not found the default value is returned.
+%% @end
+%%--------------------------------------------------------------------
 -spec get(Key::keys(), Default::value(), Obj::object()|jsxarray()) -> value().
 
 get(Key, Default, Obj) ->
@@ -62,8 +82,16 @@ get(Key, Default, Obj) ->
             Default
     end.
 
+%%--------------------------------------------------------------------
+%% @doc Gets a possibly nested key in a jsxd structure, if the key
+%% is a binary it is assumed to be 'unparsed' and will be translated.
+%%
+%% To set a single binary key direcntly pass in [Key].
+%%
+%% If the key is not found undefined is returned.
+%% @end
+%%--------------------------------------------------------------------
 -spec get(Key::keys(), Obj::object()|jsxarray()) -> {ok, value()} | undefined.
-
 get(Key, Obj) when (is_list(Obj) orelse is_map(Obj)),
                    is_binary(Key) ->
     get(parse_path(Key), Obj);
@@ -127,6 +155,11 @@ get([Key | Keys], Obj) when (is_integer(Key) orelse is_atom(Key)
             undefined
     end.
 
+%%--------------------------------------------------------------------
+%% @doc Selects a set of key from a jsxd structure, discarding all
+%% others. This does not work in nested fasion!
+%% @end
+%%--------------------------------------------------------------------
 -spec select(Keys::[key()], Obj::object()) -> Obj::object().
 select(Keys, Obj) when is_map(Obj) ->
     maps:with(Keys, Obj);
@@ -148,6 +181,11 @@ select_int([Key1 | Keys], [{Key2, _} | _] = Obj) when Key1 < Key2 ->
 select_int([Key1 | _] = Keys, [{Key2, _} | Obj]) when Key1 > Key2 ->
     select(Keys, Obj).
 
+%%--------------------------------------------------------------------
+%% @doc Sets a value of a jsxd structure, the key behaves the same way
+%% os it does for get/2.
+%% @end
+%%--------------------------------------------------------------------
 set([], Val, _Obj) ->
     Val;
 
@@ -183,6 +221,11 @@ set([Key], Val, []) when is_binary(Key) ->
 set([Key | [_ | _] = Keys], Value, Obj) ->
     jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
 
+%%--------------------------------------------------------------------
+%% @doc Deletes a value from a jsxd structure, the key behaves the
+%% same way os it does for get/2.
+%% @end
+%%--------------------------------------------------------------------
 delete(Key, Obj) when is_integer(Key)->
     delete([Key], Obj);
 
@@ -225,6 +268,13 @@ delete(Keys, Obj) ->
                                  jsxd:delete([LastKey], Obj1)
                          end, Obj).
 
+%%--------------------------------------------------------------------
+%% @doc Updates a value from a jsxd structure using a function, the
+%% key behaves the same way os it does for get/2.
+%%
+%% If the key does not exist no change is applied.
+%% @end
+%%--------------------------------------------------------------------
 update(Keys, UpdateFn, Obj) ->
     case jsxd:get(Keys, Obj) of
         undefined ->
@@ -233,6 +283,13 @@ update(Keys, UpdateFn, Obj) ->
             jsxd:set(Keys, UpdateFn(Val), Obj)
     end.
 
+%%--------------------------------------------------------------------
+%% @doc Updates a value from a jsxd structure using a function, the
+%% key behaves the same way os it does for get/2.
+%%
+%% If the key does not exist the default value is set as new value.
+%% @end
+%%--------------------------------------------------------------------
 update(Keys, UpdateFn, Default, Obj) ->
     case jsxd:get(Keys, Obj) of
         undefined ->
@@ -241,6 +298,11 @@ update(Keys, UpdateFn, Default, Obj) ->
             jsxd:set(Keys, UpdateFn(Val), Obj)
     end.
 
+%%--------------------------------------------------------------------
+%% @doc Appends a value to a jsxd structure. The value appended to
+%% must be either undefined or a 'array'.
+%% @end
+%%--------------------------------------------------------------------
 append(Keys, Value, Obj) ->
     jsxd:update(Keys, fun([{_,_} | _]) ->
                               error(bad_argument);
@@ -250,6 +312,11 @@ append(Keys, Value, Obj) ->
                               error(bad_argument)
                       end, [Value], Obj).
 
+%%--------------------------------------------------------------------
+%% @doc Prepends a value to a jsxd structure. The value appended to
+%% must be either undefined or a 'array'.
+%% @end
+%%--------------------------------------------------------------------
 prepend(Keys, Value, Obj) ->
     jsxd:update(Keys, fun([{_,_} | _]) ->
                               error(bad_argument);
@@ -260,6 +327,13 @@ prepend(Keys, Value, Obj) ->
                       end, [Value], Obj).
 
 
+%%--------------------------------------------------------------------
+%% @doc Maps each value of a jsxd structure using a function.
+%%
+%% The key is either the map key or the array index. However while
+%% passed into the function the key can not be changed.
+%% @end
+%%--------------------------------------------------------------------
 map(MapFn, Obj) when is_map(Obj) ->
     maps:map(MapFn, Obj);
 map(MapFn, [{_, _} | _] = Obj) ->
@@ -275,6 +349,12 @@ map(MapFn, Obj) ->
     Res.
 
 
+%%--------------------------------------------------------------------
+%% @doc Folds over an jsxd structure.
+%%
+%% The key is either the map key or the array index.
+%% @end
+%%--------------------------------------------------------------------
 fold(FoldFn, Acc0, Obj) when is_map(Obj) ->
     maps:fold(FoldFn, Acc0, Obj);
 
@@ -289,6 +369,13 @@ fold(FoldFn, Acc0, Obj) ->
                            end, {0, Acc0}, Obj),
     Res.
 
+%%--------------------------------------------------------------------
+%% @doc Merges two objects, where the 2nd objects overwrites values
+%% in the first object.
+%%
+%% The object can not be an array.
+%% @end
+%%--------------------------------------------------------------------
 -spec merge(object(), object()) -> object().
 merge(Obj1, Obj2) when is_map(Obj1), is_map(Obj2) ->
     maps:merge(Obj2, Obj1);
@@ -296,6 +383,13 @@ merge(Obj1, Obj2) when is_map(Obj1), is_map(Obj2) ->
 merge(Obj1, Obj2) ->
     merge(fun(_,V,_) -> V end, Obj1, Obj2).
 
+%%--------------------------------------------------------------------
+%% @doc Merges two objects, using a given function to resolve
+%% conflicts.
+%%
+%% The object can not be an array.
+%% @end
+%%--------------------------------------------------------------------
 merge(ConflictFn, Obj1, Obj2) when is_map(Obj1) ->
     merge(ConflictFn, lists:sort(maps:to_list(Obj1)), Obj2);
 merge(ConflictFn, Obj1, Obj2) when is_map(Obj2) ->
@@ -327,6 +421,12 @@ acc_merge(ConflictFn, Obj1, [{}], ObjAcc) ->
 acc_merge(ConflictFn, Obj1, [], ObjAcc) ->
     acc_merge(ConflictFn,[], [], ObjAcc ++ Obj1).
 
+%%--------------------------------------------------------------------
+%% @doc Threads mutliple changes to jsxd structure, the result from
+%% the nth opperation is passed in as new object in the nth+1
+%% opperation.
+%% @end
+%%--------------------------------------------------------------------
 thread([], Obj) ->
     Obj;
 
