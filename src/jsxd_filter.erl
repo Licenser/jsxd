@@ -164,7 +164,7 @@ filter_(O, {'<', P, V}) ->
     end;
 filter_(O, {'~=', P, Re}) ->
     case jsxd:get(P, O) of
-        {ok, V1} ->
+        {ok, V1} when is_binary(V1) ->
             re:run(V1, Re, [{capture, none}]) =:= match;
         _ ->
             false
