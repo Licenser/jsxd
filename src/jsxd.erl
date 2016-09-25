@@ -110,10 +110,7 @@ get(_Key, #{}) when is_integer(_Key) ->
     undefined;
 
 get([Pos], [H | _T] = Arr) when is_integer(Pos),
-                                (is_number(H) orelse
-                                 is_binary(H) orelse
-                                 is_list(H) orelse
-                                 is_atom(H))->
+                                not is_tuple(H)->
     try lists:nth(Pos + 1, Arr) of
         Value ->
             {ok, Value}
@@ -196,10 +193,7 @@ set(Key, Val, Obj) when is_binary(Key) ->
     set(parse_path(Key), Val, Obj);
 
 set([Pos], Val, [H | _T] = Arr) when is_integer(Pos),
-                                     (is_number(H) orelse
-                                      is_binary(H) orelse
-                                      is_list(H) orelse
-                                      is_atom(H)) ->
+                                     not is_tuple(H) ->
     set_arr(Pos, Val, Arr);
 
 set([Pos], Val, [] = Arr) when is_integer(Pos) ->
@@ -219,7 +213,9 @@ set([Key], Val, []) when is_binary(Key) ->
     #{Key => Val};
 
 set([Key | [_ | _] = Keys], Value, Obj) ->
-    jsxd:set([Key], jsxd:set(Keys, Value, jsxd:get([Key], jsxd:new(), Obj)), Obj).
+    SubE = jsxd:get([Key], jsxd:new(), Obj),
+    NewE = jsxd:set(Keys, Value, SubE),
+    jsxd:set([Key], NewE , Obj).
 
 %%--------------------------------------------------------------------
 %% @doc Deletes a value from a jsxd structure, the key behaves the

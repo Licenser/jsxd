@@ -217,3 +217,11 @@ merge_conf_test() ->
     ?assertEqual(#{<<"a">> => 1, <<"b">> => 2, <<"c">> => 3, <<"d">> => 4,
                    <<"e">> => 5, <<"f">> => 6},
                  jsxd:merge(fun(_, A, B) -> A + B end, Obj1, Obj2)).
+
+array_set_test() ->
+    Exp =[#{<<"ip">> => <<"127.0.0.1">>,
+            <<"nic_tag">> => <<"admin">>,
+            <<"primary">> => true}],
+    O = [#{<<"ip">> => <<"127.0.0.1">>,<<"nic_tag">> => <<"admin">>}],
+    Res = jsxd:set([0, <<"primary">>],true ,O),
+    ?assertEqual(Exp, Res).

@@ -1,6 +1,6 @@
 {application,jsxd,
              [{description,"jsx data structire traversing and modification library."},
-              {vsn,"0.2.2"},
+              {vsn,"0.2.3"},
               {registered,[]},
               {applications,[kernel,stdlib]},
               {env,[]},
