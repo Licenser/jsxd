@@ -15,6 +15,11 @@ from_list_test() ->
     ?assertEqual([2,1], jsxd:from_list([2,1])),
     ?assertEqual(#{<<"a">> => 2, <<"b">> => 1}, jsxd:from_list([{<<"b">>, 1}, {<<"a">>, 2}])).
 
+default_test() ->
+    V = #{<<"a">> => 1},
+    ?assertEqual(V, jsxd:default(<<"a">>, 2, V)),
+    ?assertEqual(#{<<"a">> => 1, <<"b">> => 2}, jsxd:default(<<"b">>, 2, V)).
+
 get_arr_test() ->
     SubArr = [10,20,30,40,50,60],
     Arr = jsxd:from_list([1,SubArr,3,4,5,6]),

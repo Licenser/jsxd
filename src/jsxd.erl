@@ -7,6 +7,7 @@
          select/2,
          set/3,
          delete/2,
+         default/3,
          update/3,
          update/4,
          append/3,
@@ -265,6 +266,14 @@ delete(Keys, Obj) ->
                          end, Obj).
 
 %%--------------------------------------------------------------------
+%% @doc Sets a default for a key, if the key exists this has no
+%% effect.
+%% @end
+%%--------------------------------------------------------------------
+default(Keys, Value, Obj) ->
+    update(Keys, fun(X) -> X end, Value, Obj).
+
+%%--------------------------------------------------------------------
 %% @doc Updates a value from a jsxd structure using a function, the
 %% key behaves the same way os it does for get/2.
 %%
@@ -440,6 +449,9 @@ thread([{prepend, K, V}|As], Obj) ->
 
 thread([{delete, K}|As], Obj) ->
     thread(As, jsxd:delete(K, Obj));
+
+thread([{default, K, V}|As], Obj) ->
+    thread(As, jsxd:default(K, V, Obj));
 
 thread([{update, K, Fn}|As], Obj) ->
     thread(As, jsxd:update(K, Fn, Obj));
